@@ -1,13 +1,152 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My First Website</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>난수 생성기</title>
+  <style>
+    body {
+      font-family: 'Noto Sans KR', Arial, sans-serif;
+      background: #f8f9fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      max-width: 350px;
+      width: 100%;
+    }
+    .field-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    input[type="number"] {
+      width: 80px;
+      padding: 0.4rem;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #007bff;
+    }
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:active {
+      background: #0056b3;
+    }
+    .result {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-top: 1.2rem;
+      font-weight: bold;
+      color: #007bff;
+      min-height: 2em;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 1rem;
+        max-width: 98vw;
+      }
+      input[type="number"] {
+        width: 60px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <h1>안녕하세요, Vercel!</h1>
-    <p>제 첫 웹사이트 배포입니다!</p>
-    <p>자동 업데이트!!</p>
+  <div class="container">
+    <div class="field-group">
+      <label for="min">최소값</label>
+      <div class="input-row">
+        <input type="number" id="min" value="1" min="-100000" max="100000" />
+        <input type="range" id="min-range" value="1" min="-100000" max="100000" />
+      </div>
+    </div>
+    <div class="field-group">
+      <label for="max">최대값</label>
+      <div class="input-row">
+        <input type="number" id="max" value="100" min="-100000" max="100000" />
+        <input type="range" id="max-range" value="100" min="-100000" max="100000" />
+      </div>
+    </div>
+    <button id="generate">난수 생성</button>
+    <div class="result" id="result"></div>
+  </div>
+  <script>
+    const minInput = document.getElementById('min');
+    const minRange = document.getElementById('min-range');
+    const maxInput = document.getElementById('max');
+    const maxRange = document.getElementById('max-range');
+    const resultDiv = document.getElementById('result');
+    const generateBtn = document.getElementById('generate');
+
+    // 양방향 동기화
+    minInput.addEventListener('input', e => {
+      minRange.value = minInput.value;
+      if (parseInt(minInput.value) > parseInt(maxInput.value)) {
+        maxInput.value = minInput.value;
+        maxRange.value = minInput.value;
+      }
+    });
+    minRange.addEventListener('input', e => {
+      minInput.value = minRange.value;
+      if (parseInt(minRange.value) > parseInt(maxInput.value)) {
+        maxInput.value = minRange.value;
+        maxRange.value = minRange.value;
+      }
+    });
+    maxInput.addEventListener('input', e => {
+      maxRange.value = maxInput.value;
+      if (parseInt(maxInput.value) < parseInt(minInput.value)) {
+        minInput.value = maxInput.value;
+        minRange.value = maxInput.value;
+      }
+    });
+    maxRange.addEventListener('input', e => {
+      maxInput.value = maxRange.value;
+      if (parseInt(maxRange.value) < parseInt(minInput.value)) {
+        minInput.value = maxRange.value;
+        minRange.value = maxRange.value;
+      }
+    });
+
+    generateBtn.addEventListener('click', () => {
+      const min = parseInt(minInput.value);
+      const max = parseInt(maxInput.value);
+      if (isNaN(min) || isNaN(max) || min > max) {
+        resultDiv.textContent = "올바른 범위를 입력하세요.";
+        return;
+      }
+      const rand = Math.floor(Math.random() * (max - min + 1)) + min;
+      resultDiv.textContent = rand;
+    });
+  </script>
 </body>
 </html>
