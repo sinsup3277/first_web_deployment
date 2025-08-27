@@ -1,152 +1,317 @@
-<!DOCTYPE html>
-<html lang="ko">
+<!DOCTYPE html><html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>난수 생성기</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>난수 생성기 · 히스토그램 누적</title>
   <style>
-    body {
-      font-family: 'Noto Sans KR', Arial, sans-serif;
-      background: #f8f9fa;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
+    :root{
+      --bg: #0b0c0f;
+      --card: #11131a;
+      --text: #e8ecf1;
+      --muted: #a5b0c2;
+      --accent: #4da3ff;
+      --accent-2: #88d6ff;
+      --border: #1f2330;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
     }
-    .container {
-      background: #fff;
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-      max-width: 350px;
-      width: 100%;
-    }
-    .field-group {
-      margin-bottom: 1.5rem;
-    }
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-    }
-    .input-row {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
-    input[type="number"] {
-      width: 80px;
-      padding: 0.4rem;
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      font-size: 1rem;
-    }
-    input[type="range"] {
-      flex: 1;
-      accent-color: #007bff;
-    }
-    button {
-      width: 100%;
-      padding: 0.8rem;
-      background: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:active {
-      background: #0056b3;
-    }
-    .result {
-      text-align: center;
-      font-size: 1.5rem;
-      margin-top: 1.2rem;
-      font-weight: bold;
-      color: #007bff;
-      min-height: 2em;
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 1rem;
-        max-width: 98vw;
-      }
-      input[type="number"] {
-        width: 60px;
+    @media (prefers-color-scheme: light) {
+      :root{
+        --bg:#f6f8fb; --card:#fff; --text:#0f172a; --muted:#475569; --accent:#2563eb; --accent-2:#60a5fa; --border:#e5e7eb; --shadow:0 10px 30px rgba(0,0,0,.08);
       }
     }
+    *{box-sizing:border-box}
+    html,body{ height:100%; }
+    body{
+      margin:0; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Apple SD Gothic Neo, Arial, sans-serif;
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .app{
+      width: min(920px, 100%);
+      display:grid; gap:18px;
+    }
+    .title{ font-weight:700; letter-spacing:.2px; }
+    .subtitle{ color:var(--muted); font-size:.95rem; }
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .controls{ display:grid; gap:14px; }
+    .grid{
+      display:grid; gap:12px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width:720px){ .grid{ grid-template-columns: 1fr; } }
+    label{ display:block; font-weight:600; margin-bottom:6px; }
+    .row{ display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:end; }
+    input[type="number"], input[type="range"]{
+      width:100%;
+    }
+    input[type="number"]{
+      appearance:textfield; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:12px; padding:10px 12px; font-size:1rem;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+    input[type="range"]{ height: 28px; }
+    .range-wrap{ display:grid; gap:6px; }
+    .hint{ color:var(--muted); font-size:.88rem; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      cursor:pointer; border:none; border-radius:12px; padding:12px 16px; font-weight:700; font-size:1rem; letter-spacing:.2px;
+      color:white; background:linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow:0 6px 18px rgba(77,163,255,.3);
+    }
+    button:active{ transform: translateY(1px); }
+    .pill{
+      padding:8px 12px; border-radius:999px; border:1px solid var(--border); color:var(--muted); font-weight:600; font-size:.9rem; background:transparent;
+    }
+    .result{
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    .result .value{ font-size:1.4rem; font-weight:800; padding:4px 10px; border-radius:10px; background:rgba(77,163,255,.1); color:var(--accent); }
+    .canvas-card{ padding:0; overflow:hidden; }
+    .canvas-head{ display:flex; justify-content:space-between; align-items:center; padding:16px 16px 0 16px; }
+    .canvas-body{ padding: 0 16px 16px 16px; }
+    .legend{ color:var(--muted); font-size:.85rem; }
+    .stat{ color:var(--muted); font-weight:700; }
+    canvas{ width:100%; height:320px; display:block; }
+    .footer-note{ color:var(--muted); font-size:.85rem; text-align:center; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="field-group">
-      <label for="min">최소값</label>
-      <div class="input-row">
-        <input type="number" id="min" value="1" min="-100000" max="100000" />
-        <input type="range" id="min-range" value="1" min="-100000" max="100000" />
+  <main class="app" role="application" aria-label="난수 생성기">
+    <header>
+      <div class="title" style="font-size:1.6rem;">난수 생성기</div>
+      <div class="subtitle">범위를 조절하고 난수를 생성하면, 히스토그램이 <strong>범위를 변경할 때에만 초기화</strong>되고 그 외에는 결과를 누적합니다.</div>
+    </header><section class="card controls" aria-labelledby="controls-title">
+  <h2 id="controls-title" class="title" style="font-size:1.1rem;">범위 설정 & 입력</h2>
+
+  <div class="grid">
+    <div class="range-wrap">
+      <label for="minNumber">최소값</label>
+      <div class="row">
+        <input id="minNumber" type="number" inputmode="numeric" aria-label="최소값 숫자 입력" />
+        <span class="pill" id="minLive">—</span>
       </div>
+      <input id="minRange" type="range" min="-999" max="999" step="1" aria-label="최소값 슬라이더" />
     </div>
-    <div class="field-group">
-      <label for="max">최대값</label>
-      <div class="input-row">
-        <input type="number" id="max" value="100" min="-100000" max="100000" />
-        <input type="range" id="max-range" value="100" min="-100000" max="100000" />
+    <div class="range-wrap">
+      <label for="maxNumber">최대값</label>
+      <div class="row">
+        <input id="maxNumber" type="number" inputmode="numeric" aria-label="최대값 숫자 입력" />
+        <span class="pill" id="maxLive">—</span>
       </div>
+      <input id="maxRange" type="range" min="-999" max="999" step="1" aria-label="최대값 슬라이더" />
     </div>
-    <button id="generate">난수 생성</button>
-    <div class="result" id="result"></div>
   </div>
-  <script>
-    const minInput = document.getElementById('min');
-    const minRange = document.getElementById('min-range');
-    const maxInput = document.getElementById('max');
-    const maxRange = document.getElementById('max-range');
-    const resultDiv = document.getElementById('result');
-    const generateBtn = document.getElementById('generate');
 
-    // 양방향 동기화
-    minInput.addEventListener('input', e => {
-      minRange.value = minInput.value;
-      if (parseInt(minInput.value) > parseInt(maxInput.value)) {
-        maxInput.value = minInput.value;
-        maxRange.value = minInput.value;
-      }
-    });
-    minRange.addEventListener('input', e => {
-      minInput.value = minRange.value;
-      if (parseInt(minRange.value) > parseInt(maxInput.value)) {
-        maxInput.value = minRange.value;
-        maxRange.value = minRange.value;
-      }
-    });
-    maxInput.addEventListener('input', e => {
-      maxRange.value = maxInput.value;
-      if (parseInt(maxInput.value) < parseInt(minInput.value)) {
-        minInput.value = maxInput.value;
-        minRange.value = maxInput.value;
-      }
-    });
-    maxRange.addEventListener('input', e => {
-      maxInput.value = maxRange.value;
-      if (parseInt(maxRange.value) < parseInt(minInput.value)) {
-        minInput.value = maxRange.value;
-        minRange.value = maxRange.value;
-      }
-    });
+  <div class="actions">
+    <button id="btnGenerate" aria-label="난수 1개 생성">난수 생성</button>
+    <button id="btnGenerate10" class="pill" aria-label="난수 10개 연속 생성">+10회</button>
+    <button id="btnGenerate100" class="pill" aria-label="난수 100개 연속 생성">+100회</button>
+    <span class="result" aria-live="polite">
+      <span class="hint">최근 생성값:</span>
+      <span class="value" id="lastValue">—</span>
+      <span class="hint">누적 개수: <b class="stat" id="totalCount">0</b></span>
+    </span>
+  </div>
+  <div class="hint">팁: 최소/최대값을 조정하면 히스토그램이 초기화됩니다. 슬라이더와 직접 입력은 서로 연동됩니다.</div>
+</section>
 
-    generateBtn.addEventListener('click', () => {
-      const min = parseInt(minInput.value);
-      const max = parseInt(maxInput.value);
-      if (isNaN(min) || isNaN(max) || min > max) {
-        resultDiv.textContent = "올바른 범위를 입력하세요.";
-        return;
+<section class="card canvas-card" aria-labelledby="hist-title">
+  <div class="canvas-head">
+    <h2 id="hist-title" class="title" style="font-size:1.1rem;">히스토그램</h2>
+    <div class="legend" id="rangeLegend">범위: —</div>
+  </div>
+  <div class="canvas-body">
+    <canvas id="histCanvas" aria-label="난수 분포 히스토그램" role="img"></canvas>
+  </div>
+</section>
+
+<p class="footer-note">난수는 <code>crypto.getRandomValues</code>를 우선 사용하고, 지원되지 않으면 <code>Math.random</code>으로 대체합니다.</p>
+
+  </main>  <script>
+  (function(){
+    const minNumber = document.getElementById('minNumber');
+    const maxNumber = document.getElementById('maxNumber');
+    const minRange  = document.getElementById('minRange');
+    const maxRange  = document.getElementById('maxRange');
+    const minLive   = document.getElementById('minLive');
+    const maxLive   = document.getElementById('maxLive');
+    const btn1      = document.getElementById('btnGenerate');
+    const btn10     = document.getElementById('btnGenerate10');
+    const btn100    = document.getElementById('btnGenerate100');
+    const lastValueEl = document.getElementById('lastValue');
+    const totalCountEl = document.getElementById('totalCount');
+    const legendEl  = document.getElementById('rangeLegend');
+    const canvas    = document.getElementById('histCanvas');
+    const ctx       = canvas.getContext('2d');
+
+    // --- State ---
+    let state = { min: 1, max: 10, counts: [], total: 0, last: null };
+
+    function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+
+    function syncInputs(from){
+      // Keep consistency between number and range inputs
+      if(from === 'minNumber' || from === 'maxNumber'){
+        minRange.value = String(state.min);
+        maxRange.value = String(state.max);
+      } else if(from === 'minRange' || from === 'maxRange'){
+        minNumber.value = String(state.min);
+        maxNumber.value = String(state.max);
+      } else {
+        minRange.value = minNumber.value = String(state.min);
+        maxRange.value = maxNumber.value = String(state.max);
       }
-      const rand = Math.floor(Math.random() * (max - min + 1)) + min;
-      resultDiv.textContent = rand;
-    });
-  </script>
-</body>
+      minLive.textContent = state.min;
+      maxLive.textContent = state.max;
+      legendEl.textContent = `범위: ${state.min} ~ ${state.max} (총 ${state.max - state.min + 1}개 값)`;
+    }
+
+    function initHistogram(){
+      const size = state.max - state.min + 1;
+      state.counts = new Array(size).fill(0);
+      state.total = 0; state.last = null;
+      totalCountEl.textContent = '0';
+      lastValueEl.textContent = '—';
+      draw();
+    }
+
+    function setRange(newMin, newMax, source){
+      // Enforce ordering and clamp to slider limits
+      const lo = parseInt(minRange.min, 10);
+      const hi = parseInt(maxRange.max, 10);
+      newMin = clamp(Math.round(newMin), lo, hi);
+      newMax = clamp(Math.round(newMax), lo, hi);
+      if(newMin > newMax){
+        if(source === 'min') newMax = newMin; else newMin = newMax;
+      }
+      const changed = (newMin !== state.min) || (newMax !== state.max);
+      state.min = newMin; state.max = newMax;
+      syncInputs(source === 'min' ? 'minRange' : source === 'max' ? 'maxRange' : undefined);
+      if(changed) initHistogram();
+    }
+
+    function getUniformInt(min, max){
+      const range = max - min + 1;
+      if (window.crypto && crypto.getRandomValues && Number.isInteger(range) && range > 0){
+        // Rejection sampling over 32-bit space to avoid modulo bias
+        const maxUint = 0xFFFFFFFF; // 4294967295
+        const threshold = maxUint - (maxUint % range);
+        const buf = new Uint32Array(1);
+        let x;
+        do { crypto.getRandomValues(buf); x = buf[0]; } while (x > threshold);
+        return min + (x % range);
+      }
+      // Fallback
+      return Math.floor(Math.random() * range) + min;
+    }
+
+    function generateOne(){
+      const v = getUniformInt(state.min, state.max);
+      state.counts[v - state.min]++;
+      state.total++;
+      state.last = v;
+      totalCountEl.textContent = String(state.total);
+      lastValueEl.textContent = String(v);
+      draw();
+      // Try a light haptic feedback on mobile (non-blocking)
+      if (navigator.vibrate) { try { navigator.vibrate(8); } catch(_){} }
+    }
+
+    function draw(){
+      // Responsive canvas with DPR
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = canvas.clientWidth || 600;
+      const cssHeight = canvas.clientHeight || 320;
+      if(canvas.width !== Math.floor(cssWidth * dpr) || canvas.height !== Math.floor(cssHeight * dpr)){
+        canvas.width = Math.floor(cssWidth * dpr);
+        canvas.height = Math.floor(cssHeight * dpr);
+      }
+      ctx.setTransform(dpr,0,0,dpr,0,0); // Draw in CSS pixels
+      ctx.clearRect(0,0,cssWidth,cssHeight);
+
+      // Padding & axes
+      const pad = { l: 40, r: 12, t: 16, b: 28 };
+      const w = cssWidth - pad.l - pad.r;
+      const h = cssHeight - pad.t - pad.b;
+      ctx.save();
+      ctx.translate(pad.l, pad.t);
+
+      // Background grid
+      const maxCount = Math.max(1, ...state.counts);
+      const gridLines = 4; // 25% steps
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border');
+      ctx.lineWidth = 1;
+      for(let i=0;i<=gridLines;i++){
+        const y = h - (h * i / gridLines);
+        ctx.beginPath(); ctx.moveTo(0.5, y+0.5); ctx.lineTo(w+0.5, y+0.5); ctx.stroke();
+        // y labels
+        const label = Math.round(maxCount * i / gridLines);
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted');
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(label), -8, y);
+      }
+
+      // Bars
+      const n = state.counts.length;
+      if(n > 0){
+        const barW = Math.max(1, w / n - 1); // 1px min bar, 1px gap
+        const gap = Math.max(0, (w - n*barW) / Math.max(1, n-1));
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        // Accent gradient top -> bottom (uses CSS colors)
+        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        const accent2 = getComputedStyle(document.documentElement).getPropertyValue('--accent-2').trim();
+        grad.addColorStop(0, accent);
+        grad.addColorStop(1, accent2);
+        ctx.fillStyle = grad;
+        for(let i=0;i<n;i++){
+          const count = state.counts[i];
+          const bh = maxCount === 0 ? 0 : (count / maxCount) * (h - 2);
+          const x = i * (barW + gap);
+          const y = h - bh;
+          ctx.fillRect(Math.round(x)+0.5, Math.round(y)+0.5, Math.floor(barW), Math.floor(bh));
+        }
+      }
+
+      // X-axis min/max labels
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted');
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(String(state.min), 0, h + 6);
+      ctx.fillText(String(state.max), w, h + 6);
+
+      ctx.restore();
+    }
+
+    // --- Event wiring ---
+    function handleMinNumber(){
+      const v = Number(minNumber.value);
+      if(Number.isFinite(v)) setRange(v, state.max, 'min');
+    }
+    function handleMaxNumber(){
+      const v = Number(maxNumber.value);
+      if(Number.isFinite(v)) setRange(state.min, v, 'max');
+    }
+    function handleMinRange(){ setRange(Number(minRange.value), state.max, 'min'); }
+    function handleMaxRange(){ setRange(state.min, Number(maxRange.value), 'max'); }
+
+    minNumber.addEventListener('change', handleMinNumber);
+    maxNumber.addEventListener('change', handleMaxNumber);
+    minNumber.addEventListener('input', handleMinNumber);
+    maxNumber.addEventListener('input', handleMaxNumber);
+    minRange.addEventListener('input', handleMinRange);
+    maxRange.addEventListener('input', handleMaxRange);
+
+    btn1.addEventListener('click', () => generateOne());
+    btn10.addEventListener('click', () => { for(let i=0;i<10;i++) generateOne(); });
+    btn100.addEventListener('click', () => { for(let i=0;i<100;i++) generateOne(); });
+
+    window.addEventListener('resize', () => draw());
+
+    // --- Init ---
+    syncInputs();
+    setRange(state.min, state.max);
+  })();
+  </script></body>
 </html>
