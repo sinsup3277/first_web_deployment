@@ -176,8 +176,266 @@
 
 <script>
 /**
- * 모스 부호 학습 애플리케이션 로직
+ * 모바일 호환성 강화 수정 버전
  */
 const MORSE_CODE = {
     'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
-    'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-
+    'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+    'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
+    'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+    'Y': '-.--', 'Z': '--..',
+    '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
+    '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----'
+};
+
+const app = {
+    audioCtx: null,
+    oscillator: null,
+    gainNode: null,
+    
+    wpm: 20,
+    frequency: 600,
+    dotDuration: 60, 
+
+    currentChallengeChar: null, 
+    sendingTargetChar: null,    
+    inputSequence: "",          
+    lastInputTime: 0,
+    keyPressStartTime: 0,
+    inputTimer: null,           
+
+    init: function() {
+        this.updateSettings();
+        this.setupEventListeners();
+    },
+
+    // [중요] 오디오 초기화 로직 수정 (에러 방지)
+    initAudio: function() {
+        try {
+            if (!this.audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.audioCtx = new AudioContext();
+            }
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume();
+            }
+        } catch (e) {
+            console.error("오디오 초기화 실패:", e);
+        }
+    },
+
+    updateSettings: function() {
+        const wpmInput = document.getElementById('wpm-slider');
+        const freqInput = document.getElementById('freq-slider');
+        
+        if(wpmInput) this.wpm = parseInt(wpmInput.value);
+        if(freqInput) this.frequency = parseInt(freqInput.value);
+        
+        this.dotDuration = 1200 / this.wpm;
+
+        if(document.getElementById('wpm-val')) document.getElementById('wpm-val').innerText = this.wpm;
+        if(document.getElementById('freq-val')) document.getElementById('freq-val').innerText = this.frequency;
+    },
+
+    startTone: function() {
+        this.initAudio();
+        if (this.oscillator) return; 
+
+        try {
+            this.oscillator = this.audioCtx.createOscillator();
+            this.gainNode = this.audioCtx.createGain();
+
+            this.oscillator.type = 'sine';
+            this.oscillator.frequency.setValueAtTime(this.frequency, this.audioCtx.currentTime);
+            
+            this.gainNode.gain.setValueAtTime(0, this.audioCtx.currentTime);
+            this.gainNode.gain.linearRampToValueAtTime(1, this.audioCtx.currentTime + 0.01);
+
+            this.oscillator.connect(this.gainNode);
+            this.gainNode.connect(this.audioCtx.destination);
+            this.oscillator.start();
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    stopTone: function() {
+        if (this.oscillator) {
+            try {
+                this.gainNode.gain.setValueAtTime(1, this.audioCtx.currentTime);
+                this.gainNode.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.01);
+                this.oscillator.stop(this.audioCtx.currentTime + 0.01);
+            } catch(e) {}
+            this.oscillator = null;
+        }
+    },
+
+    // [핵심 수정] 화면 전환 로직 순서 변경
+    navigate: function(screenId) {
+        // 1. 화면 전환을 '먼저' 수행 (오디오가 실패해도 화면은 넘어가게 함)
+        document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
+        const targetScreen = document.getElementById(screenId + '-screen');
+        if (targetScreen) targetScreen.classList.remove('hidden');
+
+        // 2. 그 다음 오디오 초기화 시도
+        this.initAudio();
+
+        // 3. 모드별 기능 실행
+        if (screenId === 'listening') this.startListeningMode();
+        if (screenId === 'sending') this.startSendingMode();
+    },
+
+    startListeningMode: function() {
+        this.pickRandomChar();
+        const input = document.getElementById('listening-input');
+        input.value = '';
+        document.getElementById('listening-feedback').innerText = '';
+        input.focus();
+    },
+
+    pickRandomChar: function() {
+        const chars = Object.keys(MORSE_CODE);
+        this.currentChallengeChar = chars[Math.floor(Math.random() * chars.length)];
+        document.getElementById('listening-display').innerText = "?";
+        // 화면 로딩 직후 소리가 씹히는 것을 방지하기 위해 약간의 딜레이
+        setTimeout(() => this.playMorseString(MORSE_CODE[this.currentChallengeChar]), 600);
+    },
+
+    playCurrentChallenge: function() {
+        if(this.currentChallengeChar) {
+            this.playMorseString(MORSE_CODE[this.currentChallengeChar]);
+        }
+    },
+
+    playMorseString: function(morseStr) {
+        if(!this.audioCtx) return; // 오디오 없으면 중단
+        
+        let now = this.audioCtx.currentTime;
+        now += 0.1; 
+
+        for (let symbol of morseStr) {
+            const duration = (symbol === '.') ? this.dotDuration : (this.dotDuration * 3);
+            
+            try {
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.frequency.value = this.frequency;
+                osc.connect(gain);
+                gain.connect(this.audioCtx.destination);
+                
+                osc.start(now);
+                osc.stop(now + (duration / 1000));
+            } catch (e) {}
+            
+            now += (duration / 1000) + (this.dotDuration / 1000); 
+        }
+    },
+
+    checkListeningAnswer: function(input) {
+        if (input.toUpperCase() === this.currentChallengeChar) {
+            document.getElementById('listening-feedback').innerText = "정답! 🎉";
+            document.getElementById('listening-display').innerText = this.currentChallengeChar;
+            setTimeout(() => this.startListeningMode(), 1500);
+        } else {
+            document.getElementById('listening-feedback').innerText = "다시 들어보세요.";
+            this.playCurrentChallenge();
+        }
+        document.getElementById('listening-input').value = '';
+    },
+
+    startSendingMode: function() {
+        this.inputSequence = "";
+        document.getElementById('sending-result').innerText = "";
+        this.pickSendingTarget();
+    },
+
+    pickSendingTarget: function() {
+        const chars = Object.keys(MORSE_CODE);
+        this.sendingTargetChar = chars[Math.floor(Math.random() * chars.length)];
+        document.getElementById('target-char').innerText = this.sendingTargetChar;
+        document.getElementById('sending-feedback').innerText = "신호를 입력하세요";
+        this.sendingTargetCharElement = document.getElementById('target-char'); 
+        this.sendingTargetCharElement.style.color = "var(--active-color)";
+        this.inputSequence = "";
+        document.getElementById('sending-result').innerText = "";
+    },
+
+    handleKeyDown: function() {
+        if (this.keyPressStartTime === 0) {
+            this.keyPressStartTime = Date.now();
+            this.startTone();
+            const btn = document.getElementById('telegraph-key');
+            if(btn) btn.classList.add('active');
+            if(this.inputTimer) clearTimeout(this.inputTimer);
+        }
+    },
+
+    handleKeyUp: function() {
+        if (this.keyPressStartTime !== 0) {
+            const duration = Date.now() - this.keyPressStartTime;
+            this.stopTone();
+            const btn = document.getElementById('telegraph-key');
+            if(btn) btn.classList.remove('active');
+            this.keyPressStartTime = 0;
+
+            const threshold = this.dotDuration * 2.5; 
+            const symbol = (duration < threshold) ? '.' : '-';
+            
+            this.inputSequence += symbol;
+            document.getElementById('sending-result').innerText = this.inputSequence;
+
+            const checkDelay = this.dotDuration * 7; 
+            this.inputTimer = setTimeout(() => this.checkSendingAnswer(), checkDelay);
+        }
+    },
+
+    checkSendingAnswer: function() {
+        const targetCode = MORSE_CODE[this.sendingTargetChar];
+        if (this.inputSequence === targetCode) {
+            document.getElementById('sending-feedback').innerText = "성공! ⭕";
+            document.getElementById('target-char').style.color = "#2ecc71";
+            setTimeout(() => {
+                this.pickSendingTarget();
+            }, 1000);
+        } else {
+            document.getElementById('sending-feedback').innerText = "실패 ❌ (정답: " + targetCode + ")";
+            this.inputSequence = "";
+            document.getElementById('sending-result').innerText = "";
+        }
+    },
+
+    setupEventListeners: function() {
+        const inputField = document.getElementById('listening-input');
+        if(inputField) {
+            inputField.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.checkListeningAnswer(e.target.value);
+            });
+        }
+
+        const keyBtn = document.getElementById('telegraph-key');
+        if(keyBtn) {
+            keyBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault(); 
+                this.handleKeyDown();
+            }, { passive: false });
+
+            keyBtn.addEventListener('touchend', (e) => {
+                e.preventDefault(); 
+                this.handleKeyUp();
+            });
+
+            keyBtn.addEventListener('mousedown', (e) => { this.handleKeyDown(); });
+            keyBtn.addEventListener('mouseup', (e) => { this.handleKeyUp(); });
+            keyBtn.addEventListener('mouseleave', (e) => { 
+                if(this.keyPressStartTime !== 0) this.handleKeyUp(); 
+            });
+        }
+    }
+};
+
+// [중요] HTML에서 onclick="app.navigate()"를 인식할 수 있도록 전역 객체에 할당
+window.app = app;
+
+app.init();
+</script>
+
