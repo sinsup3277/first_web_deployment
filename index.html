@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>모스 부호 마스터 (Mobile)</title>
+    <title>모스 부호 마스터 (Touch UI)</title>
     <style>
         :root {
             --bg-color: #2c3e50;
@@ -11,6 +11,7 @@
             --accent-color: #e74c3c;
             --secondary-color: #34495e;
             --active-color: #f1c40f;
+            --keyboard-bg: #455a64;
         }
 
         body {
@@ -24,58 +25,58 @@
             height: 100vh;
             margin: 0;
             text-align: center;
-            /* 모바일 드래그/선택 방지 */
             user-select: none;
             -webkit-user-select: none; 
             touch-action: manipulation;
+            overflow: hidden; /* 스크롤 방지 */
         }
 
         .container {
-            width: 90%;
+            width: 95%;
             max-width: 500px;
             background: var(--secondary-color);
-            padding: 20px;
+            padding: 15px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
+            max-height: 95vh;
+            overflow-y: auto;
         }
 
-        h1, h2 { margin: 0 0 10px 0; }
+        h1, h2 { margin: 0 0 10px 0; font-size: 1.5rem; }
         .hidden { display: none !important; }
 
         button {
             background-color: var(--accent-color);
             color: white;
             border: none;
-            padding: 12px 20px;
+            padding: 12px;
             border-radius: 8px;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.1s, background-color 0.2s;
-            /* 모바일 터치 하이라이트 제거 */
             -webkit-tap-highlight-color: transparent;
         }
 
         button:active { transform: scale(0.96); }
         button.secondary { background-color: #7f8c8d; }
-        
-        /* 송신 버튼 (전건) 스타일 - 가장 중요 */
+        button.action-btn { width: 100%; margin-top: 5px; }
+
+        /* 송신 버튼 스타일 */
         #telegraph-key {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            font-size: 1.5rem;
-            margin: 20px auto;
+            font-size: 1.2rem;
+            margin: 10px auto;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #f39c12;
             box-shadow: 0 6px #d35400;
-            border-bottom: none;
-            /* 터치 시 줌 방지 */
             touch-action: none; 
         }
 
@@ -87,31 +88,47 @@
 
         .display-box {
             background: rgba(0,0,0,0.2);
-            padding: 15px;
+            padding: 10px;
             border-radius: 5px;
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: bold;
             letter-spacing: 3px;
-            min-height: 40px;
-            word-break: break-all;
-        }
-
-        input[type=text] {
-            font-size: 1.2rem;
-            padding: 10px;
-            width: 70%;
-            text-align: center;
-            text-transform: uppercase;
-            border-radius: 5px;
-            border: none;
-            margin-top: 10px;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .feedback {
             font-size: 1rem;
             height: 1.2rem;
             color: var(--active-color);
-            margin-top: 5px;
+            margin: 5px 0;
+        }
+
+        /* 4번 요구사항: 온스크린 키보드 스타일 */
+        #keyboard-area {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); /* 한 줄에 6개 */
+            gap: 5px;
+            margin-top: 10px;
+            padding: 5px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .key-btn {
+            background-color: var(--keyboard-bg);
+            color: white;
+            padding: 12px 0;
+            font-size: 1.1rem;
+            border-radius: 5px;
+            border: none;
+            box-shadow: 0 2px rgba(0,0,0,0.2);
+        }
+        .key-btn:active {
+            background-color: #607d8b;
+            transform: translateY(2px);
         }
 
         .setting-row {
@@ -138,26 +155,36 @@
     </div>
 
     <div id="listening-screen" class="hidden">
-        <h2>듣기 연습</h2>
-        <div class="display-box" id="listening-display" style="font-size: 3rem;">?</div>
-        <button onclick="app.playCurrentChallenge()">🔊 다시 듣기</button>
-        <div>
-            <input type="text" id="listening-input" placeholder="알파벳 입력" maxlength="1">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>듣기 연습</h2>
+            <button class="secondary" style="padding:5px 10px; font-size:0.8rem;" onclick="app.navigate('menu')">종료</button>
         </div>
+        
+        <div class="display-box" id="listening-display" style="font-size: 3rem;">?</div>
+        
+        <div style="display:flex; gap:5px;">
+            <button class="action-btn" onclick="app.playCurrentChallenge()">🔊 다시 듣기</button>
+            <button class="action-btn secondary" onclick="app.giveUpAndNext()">🏳️ 정답 보기</button>
+        </div>
+
         <p class="feedback" id="listening-feedback"></p>
-        <button class="secondary" onclick="app.navigate('menu')">메뉴로</button>
+        
+        <div id="keyboard-area">
+            </div>
     </div>
 
     <div id="sending-screen" class="hidden">
-        <h2>보내기 연습</h2>
-        <p>아래 글자를 신호로 보내세요</p>
-        <div style="font-size:2.5rem; font-weight:bold; color:var(--active-color);" id="target-char">READY</div>
-        <div class="display-box" id="sending-result" style="font-size: 1.5rem; height:30px; margin-top:10px;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>보내기 연습</h2>
+            <button class="secondary" style="padding:5px 10px; font-size:0.8rem;" onclick="app.navigate('menu')">종료</button>
+        </div>
+        <p style="margin:5px;">아래 글자를 신호로 보내세요</p>
+        <div style="font-size:3rem; font-weight:bold; color:var(--active-color);" id="target-char">READY</div>
+        
+        <div class="display-box" id="sending-result" style="font-size: 2rem;"></div>
         
         <button id="telegraph-key">PUSH</button> 
-        
         <p class="feedback" id="sending-feedback"></p>
-        <button class="secondary" onclick="app.navigate('menu')">종료</button>
     </div>
 
     <div id="settings-screen" class="hidden">
@@ -170,22 +197,22 @@
             <label>주파수 (Hz): <span id="freq-val">600</span></label>
             <input type="range" id="freq-slider" min="400" max="900" value="600" oninput="app.updateSettings()">
         </div>
-        <button class="secondary" onclick="app.navigate('menu')">저장 후 돌아가기</button>
+        <button class="secondary action-btn" onclick="app.navigate('menu')">저장 후 돌아가기</button>
     </div>
 </div>
 
 <script>
 /**
- * 모바일 호환성 강화 수정 버전
+ * 1번 요구사항: 모스 부호 기호 변경 (•, –)
  */
 const MORSE_CODE = {
-    'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
-    'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
-    'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
-    'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
-    'Y': '-.--', 'Z': '--..',
-    '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
-    '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----'
+    'A': '•–', 'B': '–•••', 'C': '–•–•', 'D': '–••', 'E': '•', 'F': '••–•',
+    'G': '––•', 'H': '••••', 'I': '••', 'J': '•–––', 'K': '–•–', 'L': '•–••',
+    'M': '––', 'N': '–•', 'O': '–––', 'P': '•––•', 'Q': '––•–', 'R': '•–•',
+    'S': '•••', 'T': '–', 'U': '••–', 'V': '•••–', 'W': '•––', 'X': '–••–',
+    'Y': '–•––', 'Z': '––••',
+    '1': '•––––', '2': '••–––', '3': '•••––', '4': '••••–', '5': '•••••',
+    '6': '–••••', '7': '––•••', '8': '–––••', '9': '––––•', '0': '–––––'
 };
 
 const app = {
@@ -200,16 +227,30 @@ const app = {
     currentChallengeChar: null, 
     sendingTargetChar: null,    
     inputSequence: "",          
-    lastInputTime: 0,
     keyPressStartTime: 0,
     inputTimer: null,           
 
     init: function() {
         this.updateSettings();
+        this.renderKeyboard(); // 키보드 생성
         this.setupEventListeners();
     },
 
-    // [중요] 오디오 초기화 로직 수정 (에러 방지)
+    // 4번 요구사항: 키보드 동적 생성
+    renderKeyboard: function() {
+        const keyboardArea = document.getElementById('keyboard-area');
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
+        
+        chars.forEach(char => {
+            const btn = document.createElement('button');
+            btn.innerText = char;
+            btn.className = 'key-btn';
+            // 터치 시 정답 확인 함수 호출
+            btn.onclick = () => this.checkListeningAnswer(char);
+            keyboardArea.appendChild(btn);
+        });
+    },
+
     initAudio: function() {
         try {
             if (!this.audioCtx) {
@@ -220,7 +261,7 @@ const app = {
                 this.audioCtx.resume();
             }
         } catch (e) {
-            console.error("오디오 초기화 실패:", e);
+            console.error("Audio Init Error", e);
         }
     },
 
@@ -254,15 +295,12 @@ const app = {
             this.oscillator.connect(this.gainNode);
             this.gainNode.connect(this.audioCtx.destination);
             this.oscillator.start();
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) {}
     },
 
     stopTone: function() {
         if (this.oscillator) {
             try {
-                this.gainNode.gain.setValueAtTime(1, this.audioCtx.currentTime);
                 this.gainNode.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.01);
                 this.oscillator.stop(this.audioCtx.currentTime + 0.01);
             } catch(e) {}
@@ -270,35 +308,28 @@ const app = {
         }
     },
 
-    // [핵심 수정] 화면 전환 로직 순서 변경
     navigate: function(screenId) {
-        // 1. 화면 전환을 '먼저' 수행 (오디오가 실패해도 화면은 넘어가게 함)
         document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
         const targetScreen = document.getElementById(screenId + '-screen');
         if (targetScreen) targetScreen.classList.remove('hidden');
 
-        // 2. 그 다음 오디오 초기화 시도
         this.initAudio();
 
-        // 3. 모드별 기능 실행
         if (screenId === 'listening') this.startListeningMode();
         if (screenId === 'sending') this.startSendingMode();
     },
 
+    // --- 듣기 모드 ---
     startListeningMode: function() {
         this.pickRandomChar();
-        const input = document.getElementById('listening-input');
-        input.value = '';
-        document.getElementById('listening-feedback').innerText = '';
-        input.focus();
+        document.getElementById('listening-feedback').innerText = "";
     },
 
     pickRandomChar: function() {
         const chars = Object.keys(MORSE_CODE);
         this.currentChallengeChar = chars[Math.floor(Math.random() * chars.length)];
         document.getElementById('listening-display').innerText = "?";
-        // 화면 로딩 직후 소리가 씹히는 것을 방지하기 위해 약간의 딜레이
-        setTimeout(() => this.playMorseString(MORSE_CODE[this.currentChallengeChar]), 600);
+        setTimeout(() => this.playMorseString(MORSE_CODE[this.currentChallengeChar]), 500);
     },
 
     playCurrentChallenge: function() {
@@ -307,14 +338,15 @@ const app = {
         }
     },
 
+    // 1번 요구사항 반영: '•' 기호 인식
     playMorseString: function(morseStr) {
-        if(!this.audioCtx) return; // 오디오 없으면 중단
+        if(!this.audioCtx) return;
         
-        let now = this.audioCtx.currentTime;
-        now += 0.1; 
+        let now = this.audioCtx.currentTime + 0.1; 
 
         for (let symbol of morseStr) {
-            const duration = (symbol === '.') ? this.dotDuration : (this.dotDuration * 3);
+            // '•' 이면 단점, 그 외('–')면 장점
+            const duration = (symbol === '•') ? this.dotDuration : (this.dotDuration * 3);
             
             try {
                 const osc = this.audioCtx.createOscillator();
@@ -331,18 +363,41 @@ const app = {
         }
     },
 
-    checkListeningAnswer: function(input) {
-        if (input.toUpperCase() === this.currentChallengeChar) {
-            document.getElementById('listening-feedback').innerText = "정답! 🎉";
+    checkListeningAnswer: function(inputChar) {
+        const feedback = document.getElementById('listening-feedback');
+        
+        if (inputChar === this.currentChallengeChar) {
+            feedback.innerText = "정답! 🎉";
+            feedback.style.color = "#2ecc71";
             document.getElementById('listening-display').innerText = this.currentChallengeChar;
-            setTimeout(() => this.startListeningMode(), 1500);
+            
+            // 정답 맞출 시 소리 한번 더 들려주기 (선택 사항)
+            // this.playCurrentChallenge();
+
+            setTimeout(() => {
+                feedback.innerText = "";
+                this.startListeningMode();
+            }, 1000);
         } else {
-            document.getElementById('listening-feedback').innerText = "다시 들어보세요.";
+            feedback.innerText = `땡! (${inputChar}) 다시 들어보세요.`;
+            feedback.style.color = "#e74c3c";
             this.playCurrentChallenge();
         }
-        document.getElementById('listening-input').value = '';
     },
 
+    // 2번 요구사항: 정답 확인하고 넘어가기
+    giveUpAndNext: function() {
+        const feedback = document.getElementById('listening-feedback');
+        feedback.innerText = `정답은 [ ${this.currentChallengeChar} ] 입니다.`;
+        feedback.style.color = "#f1c40f";
+        document.getElementById('listening-display').innerText = this.currentChallengeChar;
+        
+        setTimeout(() => {
+            this.startListeningMode();
+        }, 2000);
+    },
+
+    // --- 보내기 모드 ---
     startSendingMode: function() {
         this.inputSequence = "";
         document.getElementById('sending-result').innerText = "";
@@ -354,8 +409,7 @@ const app = {
         this.sendingTargetChar = chars[Math.floor(Math.random() * chars.length)];
         document.getElementById('target-char').innerText = this.sendingTargetChar;
         document.getElementById('sending-feedback').innerText = "신호를 입력하세요";
-        this.sendingTargetCharElement = document.getElementById('target-char'); 
-        this.sendingTargetCharElement.style.color = "var(--active-color)";
+        document.getElementById('target-char').style.color = "var(--active-color)";
         this.inputSequence = "";
         document.getElementById('sending-result').innerText = "";
     },
@@ -379,7 +433,8 @@ const app = {
             this.keyPressStartTime = 0;
 
             const threshold = this.dotDuration * 2.5; 
-            const symbol = (duration < threshold) ? '.' : '-';
+            // 1번 요구사항 반영: 송신 결과도 • 와 – 로 표시
+            const symbol = (duration < threshold) ? '•' : '–';
             
             this.inputSequence += symbol;
             document.getElementById('sending-result').innerText = this.inputSequence;
@@ -398,20 +453,17 @@ const app = {
                 this.pickSendingTarget();
             }, 1000);
         } else {
-            document.getElementById('sending-feedback').innerText = "실패 ❌ (정답: " + targetCode + ")";
-            this.inputSequence = "";
-            document.getElementById('sending-result').innerText = "";
+            document.getElementById('sending-feedback').innerText = "실패 ❌";
+            // 1초 뒤 초기화
+            setTimeout(() => {
+                this.inputSequence = "";
+                document.getElementById('sending-result').innerText = "";
+                document.getElementById('sending-feedback').innerText = "다시 해보세요";
+            }, 1000);
         }
     },
 
     setupEventListeners: function() {
-        const inputField = document.getElementById('listening-input');
-        if(inputField) {
-            inputField.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.checkListeningAnswer(e.target.value);
-            });
-        }
-
         const keyBtn = document.getElementById('telegraph-key');
         if(keyBtn) {
             keyBtn.addEventListener('touchstart', (e) => {
@@ -433,9 +485,8 @@ const app = {
     }
 };
 
-// [중요] HTML에서 onclick="app.navigate()"를 인식할 수 있도록 전역 객체에 할당
 window.app = app;
-
 app.init();
 </script>
-
+</body>
+</html>
