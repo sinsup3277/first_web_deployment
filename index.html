@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>모스 부호 마스터 (Touch UI)</title>
+    <title>모스 부호 마스터 (Final)</title>
     <style>
         :root {
             --bg-color: #2c3e50;
@@ -28,7 +28,7 @@
             user-select: none;
             -webkit-user-select: none; 
             touch-action: manipulation;
-            overflow: hidden; /* 스크롤 방지 */
+            overflow: hidden;
         }
 
         .container {
@@ -65,7 +65,6 @@
         button.secondary { background-color: #7f8c8d; }
         button.action-btn { width: 100%; margin-top: 5px; }
 
-        /* 송신 버튼 스타일 */
         #telegraph-key {
             width: 100px;
             height: 100px;
@@ -106,10 +105,9 @@
             margin: 5px 0;
         }
 
-        /* 4번 요구사항: 온스크린 키보드 스타일 */
         #keyboard-area {
             display: grid;
-            grid-template-columns: repeat(6, 1fr); /* 한 줄에 6개 */
+            grid-template-columns: repeat(6, 1fr);
             gap: 5px;
             margin-top: 10px;
             padding: 5px;
@@ -202,9 +200,6 @@
 </div>
 
 <script>
-/**
- * 1번 요구사항: 모스 부호 기호 변경 (•, –)
- */
 const MORSE_CODE = {
     'A': '•–', 'B': '–•••', 'C': '–•–•', 'D': '–••', 'E': '•', 'F': '••–•',
     'G': '––•', 'H': '••••', 'I': '••', 'J': '•–––', 'K': '–•–', 'L': '•–••',
@@ -228,15 +223,22 @@ const app = {
     sendingTargetChar: null,    
     inputSequence: "",          
     keyPressStartTime: 0,
-    inputTimer: null,           
+    inputTimer: null,
+    
+    // [3번 요구사항] 출제 횟수 기록용 객체
+    charCounts: {},
 
     init: function() {
+        // charCounts 초기화
+        for(let char in MORSE_CODE) {
+            this.charCounts[char] = 0;
+        }
+
         this.updateSettings();
-        this.renderKeyboard(); // 키보드 생성
+        this.renderKeyboard(); 
         this.setupEventListeners();
     },
 
-    // 4번 요구사항: 키보드 동적 생성
     renderKeyboard: function() {
         const keyboardArea = document.getElementById('keyboard-area');
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
@@ -245,7 +247,6 @@ const app = {
             const btn = document.createElement('button');
             btn.innerText = char;
             btn.className = 'key-btn';
-            // 터치 시 정답 확인 함수 호출
             btn.onclick = () => this.checkListeningAnswer(char);
             keyboardArea.appendChild(btn);
         });
@@ -261,7 +262,7 @@ const app = {
                 this.audioCtx.resume();
             }
         } catch (e) {
-            console.error("Audio Init Error", e);
+            console.error(e);
         }
     },
 
@@ -319,6 +320,44 @@ const app = {
         if (screenId === 'sending') this.startSendingMode();
     },
 
+    // [3번 요구사항 핵심] 가중치 랜덤 선택 함수
+    getWeightedRandomChar: function() {
+        const chars = Object.keys(MORSE_CODE);
+        
+        // 1. 현재 가장 많이 나온 횟수 찾기
+        let maxCount = 0;
+        for (let char of chars) {
+            if (this.charCounts[char] > maxCount) maxCount = this.charCounts[char];
+        }
+
+        // 2. 가중치를 적용한 추첨 박스 만들기
+        let weightedList = [];
+        for (let char of chars) {
+            let weight = 10; // 기본 가중치
+            
+            // 가장 많이 나온 문자는 가중치를 5로 줄임 (50% 확률 감소)
+            if (this.charCounts[char] === maxCount && maxCount > 0) {
+                weight = 5;
+            }
+
+            // 가중치만큼 배열에 문자 추가
+            for(let i=0; i<weight; i++) {
+                weightedList.push(char);
+            }
+        }
+
+        // 3. 랜덤 뽑기
+        const selectedChar = weightedList[Math.floor(Math.random() * weightedList.length)];
+        
+        // 4. 뽑힌 문자의 카운트 증가
+        this.charCounts[selectedChar]++;
+        
+        // (디버깅용) 콘솔에서 카운트 확인 가능
+        // console.log("Char Counts:", this.charCounts);
+
+        return selectedChar;
+    },
+
     // --- 듣기 모드 ---
     startListeningMode: function() {
         this.pickRandomChar();
@@ -326,8 +365,8 @@ const app = {
     },
 
     pickRandomChar: function() {
-        const chars = Object.keys(MORSE_CODE);
-        this.currentChallengeChar = chars[Math.floor(Math.random() * chars.length)];
+        // 기존 단순 Random 대신 가중치 함수 사용
+        this.currentChallengeChar = this.getWeightedRandomChar();
         document.getElementById('listening-display').innerText = "?";
         setTimeout(() => this.playMorseString(MORSE_CODE[this.currentChallengeChar]), 500);
     },
@@ -338,14 +377,12 @@ const app = {
         }
     },
 
-    // 1번 요구사항 반영: '•' 기호 인식
     playMorseString: function(morseStr) {
         if(!this.audioCtx) return;
         
         let now = this.audioCtx.currentTime + 0.1; 
 
         for (let symbol of morseStr) {
-            // '•' 이면 단점, 그 외('–')면 장점
             const duration = (symbol === '•') ? this.dotDuration : (this.dotDuration * 3);
             
             try {
@@ -371,9 +408,6 @@ const app = {
             feedback.style.color = "#2ecc71";
             document.getElementById('listening-display').innerText = this.currentChallengeChar;
             
-            // 정답 맞출 시 소리 한번 더 들려주기 (선택 사항)
-            // this.playCurrentChallenge();
-
             setTimeout(() => {
                 feedback.innerText = "";
                 this.startListeningMode();
@@ -385,7 +419,6 @@ const app = {
         }
     },
 
-    // 2번 요구사항: 정답 확인하고 넘어가기
     giveUpAndNext: function() {
         const feedback = document.getElementById('listening-feedback');
         feedback.innerText = `정답은 [ ${this.currentChallengeChar} ] 입니다.`;
@@ -405,8 +438,9 @@ const app = {
     },
 
     pickSendingTarget: function() {
-        const chars = Object.keys(MORSE_CODE);
-        this.sendingTargetChar = chars[Math.floor(Math.random() * chars.length)];
+        // 송신 연습도 똑같이 가중치 적용
+        this.sendingTargetChar = this.getWeightedRandomChar();
+        
         document.getElementById('target-char').innerText = this.sendingTargetChar;
         document.getElementById('sending-feedback').innerText = "신호를 입력하세요";
         document.getElementById('target-char').style.color = "var(--active-color)";
@@ -433,7 +467,6 @@ const app = {
             this.keyPressStartTime = 0;
 
             const threshold = this.dotDuration * 2.5; 
-            // 1번 요구사항 반영: 송신 결과도 • 와 – 로 표시
             const symbol = (duration < threshold) ? '•' : '–';
             
             this.inputSequence += symbol;
@@ -454,7 +487,6 @@ const app = {
             }, 1000);
         } else {
             document.getElementById('sending-feedback').innerText = "실패 ❌";
-            // 1초 뒤 초기화
             setTimeout(() => {
                 this.inputSequence = "";
                 document.getElementById('sending-result').innerText = "";
